@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultSection = document.getElementById('result-section');
     const resultContainer = document.getElementById('result-container');
 
-    // ✅ Vercel URL (Burayı güncelledik)
+    // ✅ Vercel URL
     const VERCEL_API = 'https://sdsd-rust.vercel.app/api/video-downloader';
 
     function isValidUrl(string) {
@@ -55,27 +55,34 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.disabled = true;
 
         try {
-            // STRATEJİ: Sırayla dene. Biri bozulursa diğerine geç.
             let videoData = null;
-            let lastError = null;
 
             // 1. Kendi Vercel API'ni dene
             try {
-                console.log('Deneme 1: Vercel API...');
+                console.log('Deneme: Vercel API...');
                 videoData = await fetchFromVercel(url);
             } catch (err) {
-                console.warn('Vercel API hatası, yedek sisteme geçiliyor:', err);
-                lastError = err;
+                console.warn('Vercel API hatası.');
             }
 
-            // 2. Eğer Vercel çalışmazsa, Public Invidious + Proxy dene (GARANTİ YÖNTEM)
+            // 2. Cobalt API (Çok Güçlü Fallback)
             if (!videoData) {
                 try {
-                    console.log('Deneme 2: Yedek API (Invidious)...');
+                    console.log('Deneme: Cobalt API...');
+                    videoData = await fetchFromCobalt(url);
+                } catch (err) {
+                    console.warn('Cobalt API hatası.');
+                }
+            }
+
+            // 3. Invidious + Proxy Fallback
+            if (!videoData) {
+                try {
+                    console.log('Deneme: Invidious API...');
                     videoData = await fetchFromInvidiousProxy(url);
                 } catch (err) {
-                    console.error('Yedek API de başarısız:', err);
-                    throw new Error('Tüm sistemler meşgul. Lütfen daha sonra tekrar deneyin veya GitHub klasör yapısını kontrol edin.');
+                    console.error('Tüm sistemler başarısız.');
+                    throw new Error('Şu an YouTube sistemlerinde bir yoğunluk var. Lütfen 10-15 saniye sonra tekrar deneyin.');
                 }
             }
 
@@ -83,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultSection.classList.remove('hidden');
             resultSection.scrollIntoView({ behavior: 'smooth' });
         } catch (err) {
-            showError(err.message || 'Video bilgisi alınamadı.');
+            showError(err.message);
         } finally {
             loader.classList.add('hidden');
             downloadBtn.disabled = false;
@@ -92,18 +99,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchFromVercel(fullUrl) {
         const response = await fetch(`${VERCEL_API}?url=${encodeURIComponent(fullUrl)}`);
-        if (!response.ok) throw new Error('Vercel API yanıt vermedi');
+        if (!response.ok) throw new Error('Vercel API Error');
         const data = await response.json();
-        if (data.status === 'error') throw new Error(data.error);
         return data;
+    }
+
+    async function fetchFromCobalt(fullUrl) {
+        // En popüler public cobalt instance'larından biri
+        const cobaltApi = 'https://cobalt.hyra.workers.dev/';
+
+        const response = await fetch(cobaltApi, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: fullUrl,
+                vCodec: 'h264',
+                vQuality: '720',
+                isAudioOnly: false,
+                isNoTTWatermark: true
+            })
+        });
+
+        if (!response.ok) throw new Error('Cobalt API Error');
+        const data = await response.json();
+
+        if (data.status === 'error') throw new Error('Cobalt Error');
+
+        const videoId = extractVideoId(fullUrl);
+        const links = [];
+
+        if (data.url) {
+            links.push({
+                quality: '720p / MP4',
+                format: 'Video',
+                url: data.url,
+                type: 'video'
+            });
+        }
+
+        if (data.picker) {
+            data.picker.forEach(item => {
+                links.push({
+                    quality: item.quality || item.type,
+                    format: item.type.toUpperCase(),
+                    url: item.url,
+                    type: item.type.includes('audio') ? 'audio' : 'video'
+                });
+            });
+        }
+
+        return {
+            videoId: videoId,
+            title: 'YouTube Video',
+            thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+            duration: '-',
+            author: 'YouTube',
+            downloadLinks: links
+        };
     }
 
     async function fetchFromInvidiousProxy(fullUrl) {
         const videoId = extractVideoId(fullUrl);
-        if (!videoId) throw new Error('YouTube ID bulunamadı');
-
-        // Çalışan Invidious instance'ları
-        const instances = ['invidious.flokinet.to', 'inv.tux.pizza', 'yewtu.be'];
+        const instances = ['inv.tux.pizza', 'invidious.asir.dev', 'invidious.io.lol'];
         const proxy = 'https://api.allorigins.win/raw?url=';
 
         for (const inst of instances) {
@@ -113,30 +173,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) continue;
 
                 const data = await response.json();
-
-                // Formatları hazırla
                 const allLinks = [];
 
-                // Video Formatları
                 if (data.formatStreams) {
                     data.formatStreams.forEach(s => {
                         allLinks.push({
                             quality: s.qualityLabel || s.resolution,
                             format: 'MP4',
-                            size: 'Hesaplanıyor',
                             url: s.url,
                             type: 'video'
                         });
                     });
                 }
 
-                // Audio Formatları
                 if (data.adaptiveFormats) {
                     data.adaptiveFormats.filter(f => f.type.includes('audio')).forEach(a => {
                         allLinks.push({
-                            quality: Math.round(a.bitrate / 1000) + 'kbps',
+                            quality: 'MP3 / Audio',
                             format: 'Audio',
-                            size: 'Hesaplanıyor',
                             url: a.url,
                             type: 'audio'
                         });
@@ -151,11 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     author: data.author,
                     downloadLinks: allLinks
                 };
-            } catch (e) {
-                continue;
-            }
+            } catch (e) { continue; }
         }
-        throw new Error('Yedek sistemler de yanıt vermedi.');
+        throw new Error('All Fail');
     }
 
     function formatDuration(seconds) {
@@ -169,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = `
             <div class="result-card">
                 <div class="result-header">
-                    <img src="${data.thumbnail}" alt="Video" class="result-thumbnail" onerror="this.src='https://placehold.co/200x112?text=Video'">
+                    <img src="${data.thumbnail}" alt="Video" class="result-thumbnail">
                     <div class="result-info">
                         <h3>${data.title}</h3>
                         <p><i class="fa-solid fa-user"></i> ${data.author}</p>
@@ -183,18 +235,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const audioLinks = data.downloadLinks.filter(l => l.type === 'audio');
 
         if (videoLinks.length > 0) {
-            html += '<h4 style="margin-bottom:15px; color: var(--text-dark);"><i class="fa-solid fa-video"></i> Video Formatları (MP4)</h4>';
-            videoLinks.forEach(link => {
+            html += '<h4 style="margin-bottom:15px; color: var(--text-dark);"><i class="fa-solid fa-video"></i> Video Formatları</h4>';
+            videoLinks.slice(0, 5).forEach(link => {
                 html += `
                     <div class="download-item">
                         <div class="quality-info">
                             <span class="quality-badge" style="color: #1976d2;">
-                                <i class="fa-solid fa-video"></i> ${link.format} - ${link.quality}
+                                <i class="fa-solid fa-video"></i> ${link.quality}
                             </span>
                         </div>
-                        <a href="${link.url}" download target="_blank" class="btn-download-item" style="background-color: #1976d2;">
-                            <i class="fa-solid fa-download"></i>
-                            İndir
+                        <a href="${link.url}" download target="_blank" rel="noopener noreferrer" class="btn-download-item" style="background-color: #1976d2;">
+                            <i class="fa-solid fa-download"></i> İndir
                         </a>
                     </div>
                 `;
@@ -203,17 +254,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (audioLinks.length > 0) {
             html += '<h4 style="margin:25px 0 15px; color: var(--text-dark);"><i class="fa-solid fa-music"></i> Ses Formatları</h4>';
-            audioLinks.forEach(link => {
+            audioLinks.slice(0, 3).forEach(link => {
                 html += `
                     <div class="download-item">
                         <div class="quality-info">
                             <span class="quality-badge" style="color: #00c853;">
-                                <i class="fa-solid fa-music"></i> ${link.format} - ${link.quality}
+                                <i class="fa-solid fa-music"></i> ${link.quality}
                             </span>
                         </div>
-                        <a href="${link.url}" download target="_blank" class="btn-download-item" style="background-color: #00c853;">
-                            <i class="fa-solid fa-download"></i>
-                            İndir
+                        <a href="${link.url}" download target="_blank" rel="noopener noreferrer" class="btn-download-item" style="background-color: #00c853;">
+                            <i class="fa-solid fa-download"></i> İndir
                         </a>
                     </div>
                 `;
@@ -221,10 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         html += `
-                    <div style="margin-top:20px; padding:15px; background: linear-gradient(135deg, rgba(25,118,210,0.1), rgba(0,200,83,0.1)); border-radius:8px;">
-                        <p style="margin:0; color: var(--text-dark); font-size:0.9rem; text-align:center;">
-                            <i class="fa-solid fa-check-circle"></i> 
-                            İndirme hazır! Butona bastığınızda indirme başlamazsa sağ tık yapıp "Farklı Kaydet" diyebilirsiniz.
+                    <div style="margin-top:20px; padding:15px; background: rgba(0,0,0,0.05); border-radius:8px;">
+                        <p style="margin:0; color: var(--text-dark); font-size:0.85rem; text-align:center;">
+                            <b>İpucu:</b> İndirme başlamazsa sağ tık yapıp "Farklı Kaydet" diyebilirsiniz.
                         </p>
                     </div>
                 </div>
@@ -239,4 +288,3 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMsg.classList.remove('hidden');
     }
 });
-
