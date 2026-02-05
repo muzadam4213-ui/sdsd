@@ -6,9 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultSection = document.getElementById('result-section');
     const resultContainer = document.getElementById('result-container');
 
-    // ⚠️ BURAYA VERCEL URL'NİZİ YAPIŞTIRIN
-    // Örnek: 'https://video-indirici-abc123.vercel.app/api/video-downloader'
-    const API_URL = 'VERCEL_URL_BURAYA';
+    // ✅ Vercel URL eklendi
+    const API_URL = 'https://sdsd-rust.vercel.app/api/video-downloader';
 
     function isValidUrl(string) {
         try {
