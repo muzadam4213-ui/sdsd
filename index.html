@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video İndirici - Ücretsiz Video ve Müzik İndir</title>
+    <meta name="description"
+        content="YouTube, TikTok, Instagram, Facebook videoları ücretsiz indirin. MP4, MP3 formatlarında hızlı indirme.">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <h1 class="logo">
+                <i class="fa-solid fa-download"></i>
+                Video<span>İndirici</span>
+            </h1>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h2>Video ve Müzik İndir</h2>
+                <p>YouTube, TikTok, Instagram ve daha fazlasından ücretsiz indirin</p>
+
+                <div class="download-form">
+                    <div class="input-wrapper">
+                        <input type="text" id="video-url" placeholder="Video bağlantısını buraya yapıştırın..."
+                            autocomplete="off">
+                    </div>
+                    <button id="download-btn" class="btn-download">
+                        <i class="fa-solid fa-download"></i>
+                        İndir
+                    </button>
+                </div>
+
+                <div id="error-msg" class="error-msg hidden"></div>
+                <div id="loader" class="loader hidden">
+                    <div class="spinner"></div>
+                    <p>Video analiz ediliyor...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Result Section -->
+        <section id="result-section" class="result-section hidden">
+            <div class="container" id="result-container">
+                <!-- Sonuçlar buraya JS ile eklenecek -->
+            </div>
+        </section>
+
+        <!-- Supported Sites -->
+        <section class="supported-sites">
+            <div class="container">
+                <h3>Desteklenen Siteler</h3>
+                <div class="sites-grid">
+                    <div class="site-item">
+                        <i class="fa-brands fa-youtube"></i>
+                        <span>YouTube</span>
+                    </div>
+                    <div class="site-item">
+                        <i class="fa-brands fa-tiktok"></i>
+                        <span>TikTok</span>
+                    </div>
+                    <div class="site-item">
+                        <i class="fa-brands fa-instagram"></i>
+                        <span>Instagram</span>
+                    </div>
+                    <div class="site-item">
+                        <i class="fa-brands fa-facebook"></i>
+                        <span>Facebook</span>
+                    </div>
+                    <div class="site-item">
+                        <i class="fa-brands fa-twitter"></i>
+                        <span>Twitter</span>
+                    </div>
+                    <div class="site-item">
+                        <i class="fa-brands fa-vimeo"></i>
+                        <span>Vimeo</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Video İndirici. Tüm hakları saklıdır.</p>
+        </div>
+    </footer>
+
+    <!-- Main JS -->
+    <script src="script.js"></script>
+</body>
+
+</html>
